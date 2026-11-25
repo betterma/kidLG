@@ -9,7 +9,7 @@ const PBKDF2_ITERATIONS = 310000;
 const STORAGE_REMEMBER = "kidlg-admin:vault-pass";
 
 /** 用 admin/vault-seal.html 生成后，粘贴到这里 */
-export const EMBEDDED_BLOB = "";
+export const EMBEDDED_BLOB = "eyJ2IjoxLCJpdGVyIjozMTAwMDAsInNhbHQiOiJzU3czQ25RZnhZWmNqOGZGR0Qwdjl3PT0iLCJpdiI6Im16REVRbmZicDRIdWx3Y2kiLCJjdCI6IktSazF2UTQ5WmJMclArV1hvT0toSDUwT2hZV0dLcnArRjNpU2RNb29TNmZGTncxdWN2YmhLeVczaUN2Yll0QTQ0YTVQcXkyakVNOEFEVGdzdjA2OG9rMmsrM1hUWjBFRFZ5b1dlUlRxL2c0SjhTNkdRQlp0VVF0WU1CU25PSmtqdTdMaXhZRXVuT3N5L2ozbTdnPT0ifQ==";
 
 /** 解锁后仅存在内存；不要写入 localStorage */
 export let memoryToken = null;
