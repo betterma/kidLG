@@ -1,0 +1,60 @@
+# 仅在「站点壳」变更时部署；data/*.json 频繁修改不会跑流水线。
+# 若只改了 JSON 也要更新线上，到 Actions 里手动 Run workflow。
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "**/*.html"
+      - "css/**"
+      - "js/**"
+      - "assets/**"
+      - "config.json"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "手动发布原因（可选）"
+        required: false
+        default: "publish including latest JSON"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Stage site files
+        run: |
+          mkdir -p _site
+          # 发布时仍带上当前仓库里的 data/（含 JSON），只是「纯 JSON 提交」不会触发本流水线
+          cp -r index.html config.json css js assets data _site/
+          if [ -d docs ]; then cp -r docs _site/; fi
+          if [ -f README.md ]; then cp README.md _site/; fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

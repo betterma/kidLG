@@ -18,13 +18,20 @@ python -m http.server 5173
 
 浏览器打开 `http://localhost:5173`。
 
-## GitHub Pages
+## GitHub Pages（Actions）
 
-1. 把本仓库推到 GitHub  
-2. Settings → Pages → Source 选分支 `main`，文件夹 `/ (root)`  
+部署由 `.github/workflows/pages.yml` 完成，避免 `data/*.json` 频繁修改刷流水线。
+
+**会触发自动部署：** `html` / `css` / `js` / `assets` / `config.json` / 本 workflow  
+**不会触发：** 只改 `data/**`（含 stages、codes、关卡 JSON）、只改 `docs/**`
+
+只更新了 JSON、也要刷新线上时：GitHub → Actions → **Deploy GitHub Pages** → **Run workflow**（手动跑一次，会带上最新 JSON）。
+
+配置步骤：
+
+1. Settings → Pages → Build and deployment → Source 选 **GitHub Actions**  
+2. 推送本仓库后，在 Actions 里确认首次部署成功（或手动 Run 一次）  
 3. 访问 `https://<用户名>.github.io/<仓库名>/`
-
-若仓库不在根路径，相对路径资源仍可用；请保持从站点根目录发布本项目文件。
 
 ## 关键配置
 
