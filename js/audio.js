@@ -7,12 +7,12 @@ export function unlockAudio() {
   }
 }
 
-function speakLetter(letter) {
+function speakText(text, lang = "en-US") {
   if (!window.speechSynthesis) return Promise.resolve();
   return new Promise((resolve) => {
-    const u = new SpeechSynthesisUtterance(String(letter).toLowerCase());
-    u.lang = "en-US";
-    u.rate = 0.85;
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.lang = lang;
+    u.rate = lang.startsWith("zh") ? 0.9 : 0.85;
     u.pitch = 1.05;
     u.volume = 1;
     u.onend = () => resolve();
@@ -32,14 +32,17 @@ async function playFile(src) {
   });
 }
 
-export async function playGlyph(glyph, { preferFiles = true, speechFallback = true } = {}) {
+export async function playGlyph(
+  glyph,
+  { preferFiles = true, speechFallback = true, speakLang = "en-US", audioKey } = {}
+) {
   if (!unlocked) unlockAudio();
-  const letter = String(glyph || "").toLowerCase();
-  if (preferFiles) {
-    const ok = await playFile(`assets/audio/letters/${letter}.mp3`);
+  const key = String(audioKey || glyph || "").toLowerCase();
+  if (preferFiles && /^[a-z]$/.test(key)) {
+    const ok = await playFile(`assets/audio/letters/${key}.mp3`);
     if (ok) return;
   }
-  if (speechFallback) await speakLetter(letter);
+  if (speechFallback) await speakText(glyph, speakLang);
 }
 
 export function playPop() {

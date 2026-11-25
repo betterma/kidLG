@@ -1,0 +1,22 @@
+{
+  "groupId": "pinyin",
+  "stageId": "world.pinyin",
+  "template": "fit-in",
+  "theme": "wooden-wall",
+  "title": "拼音世界",
+  "speakLang": "zh-CN",
+  "items": [
+    { "id": "a", "glyph": "a", "label": "单韵母 a" },
+    { "id": "o", "glyph": "o", "label": "单韵母 o" },
+    { "id": "e", "glyph": "e", "label": "单韵母 e" },
+    { "id": "i", "glyph": "i", "label": "单韵母 i" },
+    { "id": "u", "glyph": "u", "label": "单韵母 u" },
+    { "id": "ü", "glyph": "ü", "label": "单韵母 ü" },
+    { "id": "b", "glyph": "b", "label": "声母 b" },
+    { "id": "p", "glyph": "p", "label": "声母 p" },
+    { "id": "m", "glyph": "m", "label": "声母 m" },
+    { "id": "f", "glyph": "f", "label": "声母 f" },
+    { "id": "ba", "glyph": "ba", "label": "音节 ba" },
+    { "id": "ma", "glyph": "ma", "label": "音节 ma" }
+  ]
+}

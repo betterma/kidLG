@@ -1,0 +1,18 @@
+{
+  "groupId": "words",
+  "stageId": "world.words",
+  "template": "fit-in",
+  "theme": "wooden-wall",
+  "title": "单词拼写世界",
+  "speakLang": "en-US",
+  "items": [
+    { "id": "cat", "glyph": "cat", "label": "cat 猫" },
+    { "id": "dog", "glyph": "dog", "label": "dog 狗" },
+    { "id": "sun", "glyph": "sun", "label": "sun 太阳" },
+    { "id": "moon", "glyph": "moon", "label": "moon 月亮" },
+    { "id": "book", "glyph": "book", "label": "book 书" },
+    { "id": "fish", "glyph": "fish", "label": "fish 鱼" },
+    { "id": "bird", "glyph": "bird", "label": "bird 鸟" },
+    { "id": "tree", "glyph": "tree", "label": "tree 树" }
+  ]
+}

@@ -22,7 +22,13 @@ export default {
         return json({
           ok: true,
           service: "kidlg-api",
-          routes: ["/health", "POST /redeem", "PUT /progress", "GET|DELETE /progress/:hash"],
+          routes: [
+            "/health",
+            "POST /redeem",
+            "POST /checkout",
+            "PUT /progress",
+            "GET|DELETE /progress/:hash",
+          ],
         });
       }
       if (path === "/health" && request.method === "GET") {
@@ -30,6 +36,9 @@ export default {
       }
       if (path === "/redeem" && request.method === "POST") {
         return json(await redeem(request, env));
+      }
+      if (path === "/checkout" && request.method === "POST") {
+        return json(await checkout(request, env));
       }
       if (path === "/progress" && request.method === "PUT") {
         return json(await putProgress(request, env));
@@ -158,6 +167,97 @@ async function hashCode(code) {
   const data = new TextEncoder().encode(normalized);
   const buf = await crypto.subtle.digest("SHA-256", data);
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+
+function randomChunk(len = 4) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const arr = new Uint32Array(len);
+  crypto.getRandomValues(arr);
+  let out = "";
+  for (let i = 0; i < len; i++) out += chars[arr[i] % chars.length];
+  return out;
+}
+
+function generateCode() {
+  return `${randomChunk()}-${randomChunk()}-${randomChunk()}`;
+}
+
+/**
+ * 用户购买下单并发码。
+ * 当前仅支持 mock=true（演示打通流程）；正式微信/支付宝到账后调用同一写码逻辑。
+ */
+async function checkout(request, env) {
+  const c = cfg(env);
+  const body = await request.json().catch(() => ({}));
+  const stageIds = Array.isArray(body.stageIds) ? body.stageIds.filter(Boolean) : [];
+  if (!stageIds.length) return { ok: false, message: "请选择要开通的世界" };
+
+  const allowMock = env.ALLOW_MOCK_CHECKOUT !== "false";
+  if (!body.mock || !allowMock) {
+    return { ok: false, message: "暂未开通在线支付，请联系管理员获取激活码" };
+  }
+
+  // 读取 stages 校验均为付费世界上架项
+  let stagesFile;
+  try {
+    stagesFile = await getFile(env, "data/stages.json");
+  } catch {
+    return { ok: false, message: "无法读取价格配置" };
+  }
+  const stageList = Array.isArray(stagesFile.content) ? stagesFile.content : [];
+  const selected = stageIds.map((id) => stageList.find((s) => s.stageId === id));
+  if (selected.some((s) => !s || s.access !== "paid")) {
+    return { ok: false, message: "只能购买已上架的收费世界" };
+  }
+
+  const amountYuan = selected.reduce((sum, s) => sum + (Number(s.priceYuan) || 0), 0);
+  const validity = selected.some((s) => !s.validity || s.validity.type === "lifetime")
+    ? { type: "lifetime" }
+    : {
+        type: "days_from_activate",
+        days: Math.max(...selected.map((s) => s.validity?.days || 365)),
+      };
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const file = await getFile(env, c.codesPath);
+    const list = Array.isArray(file.content) ? file.content : [];
+    let code = generateCode();
+    while (list.some((item) => String(item.code).toUpperCase() === code)) {
+      code = generateCode();
+    }
+    const record = {
+      code,
+      stages: [...stageIds],
+      status: "unused",
+      validity,
+      activatedAt: null,
+      expireAt: null,
+      deviceIds: [],
+      createdAt: new Date().toISOString(),
+      note: `checkout:${body.channel || "mock"}`,
+      singleUse: true,
+      order: {
+        amountYuan,
+        channel: body.channel || "mock",
+        deviceId: body.deviceId || "",
+      },
+    };
+    list.unshift(record);
+    try {
+      await putFile(env, c.codesPath, list, file.sha, `chore(checkout): issue ${code}`);
+      return {
+        ok: true,
+        message: "支付成功（演示），已生成激活码",
+        code,
+        stages: stageIds,
+        amountYuan,
+      };
+    } catch (err) {
+      if (String(err.message).includes("409") || String(err.message).includes("sha")) continue;
+      throw err;
+    }
+  }
+  return { ok: false, message: "系统繁忙，请重试" };
 }
 
 async function redeem(request, env) {

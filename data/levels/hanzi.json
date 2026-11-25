@@ -1,0 +1,22 @@
+{
+  "groupId": "hanzi",
+  "stageId": "world.hanzi",
+  "template": "fit-in",
+  "theme": "wooden-wall",
+  "title": "汉字世界",
+  "speakLang": "zh-CN",
+  "items": [
+    { "id": "ren", "glyph": "人", "label": "人" },
+    { "id": "da", "glyph": "大", "label": "大" },
+    { "id": "xiao", "glyph": "小", "label": "小" },
+    { "id": "tian", "glyph": "天", "label": "天" },
+    { "id": "di", "glyph": "地", "label": "地" },
+    { "id": "ri", "glyph": "日", "label": "日" },
+    { "id": "yue", "glyph": "月", "label": "月" },
+    { "id": "shui", "glyph": "水", "label": "水" },
+    { "id": "huo", "glyph": "火", "label": "火" },
+    { "id": "mu", "glyph": "木", "label": "木" },
+    { "id": "shan", "glyph": "山", "label": "山" },
+    { "id": "shi", "glyph": "石", "label": "石" }
+  ]
+}

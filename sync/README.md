@@ -63,9 +63,12 @@ curl https://kidlg-api.<子域>.workers.dev/health
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/redeem` | `{ code, deviceId }` → 远程作废并返回权益 |
+| POST | `/checkout` | `{ stageIds, mock:true }` → 模拟支付并写入新激活码 |
 | PUT | `/progress` | 进度快照 |
 | GET | `/progress/:codeHash` | 拉取进度 |
 | DELETE | `/progress/:codeHash` | 清除云端进度 |
+
+`ALLOW_MOCK_CHECKOUT` 默认可演示购买；若设为字符串 `false` 则关闭前台模拟支付。
 
 ## 说明
 

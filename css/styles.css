@@ -455,13 +455,35 @@ button {
   pointer-events: none;
 }
 
-.piece-glyph {
+.piece-glyph,
+.slot-glyph {
   font-family: var(--font-display);
   font-size: clamp(3.2rem, 14vw, 5.5rem);
   font-weight: 700;
-  color: var(--wood-deep);
   line-height: 1;
   pointer-events: none;
+}
+
+.piece-glyph {
+  color: var(--wood-deep);
+}
+
+.piece-glyph[data-len="2"],
+.slot-glyph[data-len="2"] {
+  font-size: clamp(2.2rem, 10vw, 3.6rem);
+}
+
+.piece-glyph[data-len="3"],
+.slot-glyph[data-len="3"],
+.piece-glyph[data-len="4"],
+.slot-glyph[data-len="4"] {
+  font-size: clamp(1.4rem, 7vw, 2.4rem);
+  letter-spacing: 0.02em;
+}
+
+.slot.is-wide,
+.piece.is-wide {
+  width: min(52%, 220px);
 }
 
 .piece.is-docked .piece-glyph {
@@ -789,7 +811,8 @@ input[type="text"] {
   .world-node,
   .piece,
   .success-overlay,
-  .confetti {
+  .confetti,
+  .global-loading-spinner {
     animation: none !important;
   }
 
@@ -797,4 +820,94 @@ input[type="text"] {
   .btn {
     transition: none;
   }
+}
+
+/* —— 全局 Loading —— */
+.global-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: rgba(42, 26, 16, 0.35);
+  backdrop-filter: blur(2px);
+}
+
+.global-loading[hidden] {
+  display: none !important;
+}
+
+.global-loading-card {
+  background: rgba(243, 230, 208, 0.96);
+  border-radius: 20px;
+  padding: 22px 28px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  min-width: 160px;
+}
+
+.global-loading-spinner {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid rgba(92, 58, 33, 0.2);
+  border-top-color: var(--leaf);
+  animation: spin 0.8s linear infinite;
+}
+
+.global-loading-text {
+  margin: 0;
+  font-weight: 700;
+  color: var(--wood-deep);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* —— 购买弹窗 —— */
+.app-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.app-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(42, 26, 16, 0.45);
+}
+
+.app-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  background: rgba(243, 230, 208, 0.98);
+  border-radius: 22px;
+  padding: 22px 18px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+}
+
+.app-modal-panel h2 {
+  font-family: var(--font-display);
+  margin: 0 0 8px;
+  color: var(--wood-deep);
+}
+
+.price-tag {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--leaf);
+  margin: 12px 0 0;
+}
+
+.modal-msg {
+  margin-top: 12px;
+  min-height: 1.2em;
+  word-break: break-all;
 }

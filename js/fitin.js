@@ -5,8 +5,21 @@ function rand(min, max) {
   return min + Math.random() * (max - min);
 }
 
-export function mountFitIn(root, { glyph, levelId, snapDistance = 56, audioOpts }) {
-  const letter = String(glyph).toLowerCase();
+export function mountFitIn(
+  root,
+  {
+    glyph,
+    levelId,
+    snapDistance = 56,
+    audioOpts = {},
+    backHash = "#/",
+    nextHash = null,
+    successTitle = "太棒了！",
+    successText = "",
+  }
+) {
+  const display = String(glyph);
+  const longGlyph = display.length > 1;
   root.innerHTML = `
     <div class="play-wrap">
       <div class="play-toolbar">
@@ -14,21 +27,21 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, audioOpts 
         <button type="button" class="btn-speaker" data-speaker aria-label="听发音">🔊</button>
       </div>
       <div class="wood-stage" data-stage>
-        <div class="slot" data-slot>
-          <span class="slot-glyph">${letter}</span>
+        <div class="slot ${longGlyph ? "is-wide" : ""}" data-slot>
+          <span class="slot-glyph" data-len="${display.length}">${display}</span>
         </div>
-        <div class="piece" data-piece>
-          <span class="piece-glyph">${letter}</span>
+        <div class="piece ${longGlyph ? "is-wide" : ""}" data-piece>
+          <span class="piece-glyph" data-len="${display.length}">${display}</span>
         </div>
         <div class="confetti-layer" data-confetti></div>
         <div class="success-overlay" data-success>
           <div class="success-card">
-            <h2>太棒了！</h2>
-            <p>认识字母 <strong>${letter}</strong></p>
+            <h2>${successTitle}</h2>
+            <p>${successText || `认识「${display}」`}</p>
             <div class="success-actions">
               <button type="button" class="btn btn-wood" data-again>再玩一次</button>
-              <button type="button" class="btn btn-primary" data-next>下一关</button>
-              <button type="button" class="btn btn-ghost" data-back>关卡列表</button>
+              ${nextHash ? `<button type="button" class="btn btn-primary" data-next>下一关</button>` : ""}
+              <button type="button" class="btn btn-ghost" data-back>返回列表</button>
             </div>
           </div>
         </div>
@@ -100,7 +113,6 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, audioOpts 
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
-  /** 随机洞口与卡片，并保证初始不太靠近 */
   function randomizeLayout() {
     const st = stageRect();
     if (st.width < 40 || st.height < 40) return;
@@ -185,7 +197,7 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, audioOpts 
     startY = e.clientY;
     originLeft = pr.left - st.left;
     originTop = pr.top - st.top;
-    playGlyph(letter, audioOpts);
+    playGlyph(display, audioOpts);
     recordAttempt(levelId);
     e.preventDefault();
   }
@@ -239,7 +251,7 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, audioOpts 
 
   speaker.addEventListener("click", () => {
     unlockAudio();
-    playGlyph(letter, audioOpts);
+    playGlyph(display, audioOpts);
   });
 
   piece.addEventListener("pointerdown", onPointerDown);
@@ -249,23 +261,21 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, audioOpts 
   window.addEventListener("resize", onResize);
   window.addEventListener("orientationchange", onResize);
 
-  root.querySelector("[data-again]").addEventListener("click", () => {
+  const againBtn = root.querySelector("[data-again]");
+  const nextBtn = root.querySelector("[data-next]");
+  const backBtn = root.querySelector("[data-back]");
+
+  againBtn.addEventListener("click", () => {
     cleanup();
-    location.hash = `#/play/letters/${encodeURIComponent(letter)}?r=${Date.now()}`;
+    location.hash = `${location.hash.split("?")[0]}?r=${Date.now()}`;
   });
-  root.querySelector("[data-next]").addEventListener("click", () => {
+  nextBtn?.addEventListener("click", () => {
     cleanup();
-    const code = letter.charCodeAt(0);
-    let next = null;
-    if (code >= 97 && code < 122) next = String.fromCharCode(code + 1);
-    else if (code === 122) next = "A";
-    else if (code >= 65 && code < 90) next = String.fromCharCode(code + 1);
-    if (!next) location.hash = "#/letters";
-    else location.hash = `#/play/letters/${encodeURIComponent(next)}`;
+    location.hash = nextHash;
   });
-  root.querySelector("[data-back]").addEventListener("click", () => {
+  backBtn.addEventListener("click", () => {
     cleanup();
-    location.hash = "#/letters";
+    location.hash = backHash;
   });
 
   function cleanup() {

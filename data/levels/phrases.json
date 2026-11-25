@@ -1,0 +1,18 @@
+{
+  "groupId": "phrases",
+  "stageId": "world.phrases",
+  "template": "fit-in",
+  "theme": "wooden-wall",
+  "title": "汉字词语世界",
+  "speakLang": "zh-CN",
+  "items": [
+    { "id": "daxiao", "glyph": "大小", "label": "大小" },
+    { "id": "shangxia", "glyph": "上下", "label": "上下" },
+    { "id": "zuoyou", "glyph": "左右", "label": "左右" },
+    { "id": "duoshao", "glyph": "多少", "label": "多少" },
+    { "id": "fumu", "glyph": "父母", "label": "父母" },
+    { "id": "kaixin", "glyph": "开心", "label": "开心" },
+    { "id": "xuexi", "glyph": "学习", "label": "学习" },
+    { "id": "pengyou", "glyph": "朋友", "label": "朋友" }
+  ]
+}
