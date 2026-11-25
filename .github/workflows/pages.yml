@@ -1,4 +1,4 @@
-# 仅部署站点壳（html/css/js/assets/config）。
+# 仅部署站点壳（html/css/js/assets/admin/config）。
 # data/*.json 不触发流水线：线上前端直读仓库 main 的 raw JSON，push 即可生效。
 name: Deploy GitHub Pages
 
@@ -31,10 +31,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -46,7 +43,6 @@ jobs:
       - name: Stage site files
         run: |
           mkdir -p _site
-          # data/ 作为 raw 失败时的回退副本一并打包
           cp -r index.html config.json css js assets data admin _site/
           if [ -d docs ]; then cp -r docs _site/; fi
           if [ -f README.md ]; then cp README.md _site/; fi
@@ -56,6 +52,13 @@ jobs:
         with:
           path: _site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
