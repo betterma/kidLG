@@ -1,7 +1,7 @@
 {
   "codeHash": "db48f5538eab4b78",
   "deviceId": "5c522534-4b0f-4f2a-994e-5677010864fc",
-  "updatedAt": "2026-11-25T12:59:08.645Z",
+  "updatedAt": "2026-11-25T12:59:23.266Z",
   "levels": {
     "pinyin-a": {
       "stars": 1,
@@ -27,6 +27,11 @@
       "stars": 1,
       "cleared": true,
       "attempts": 14
+    },
+    "phrases-daxiao": {
+      "stars": 1,
+      "cleared": true,
+      "attempts": 1
     }
   }
 }
