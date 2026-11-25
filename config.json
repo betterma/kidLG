@@ -9,11 +9,11 @@
     "remoteBase": "https://raw.githubusercontent.com/betterma/kidLG/main/"
   },
   "license": {
-    "endpoint": ""
+    "endpoint": "https://long-bird-3fba.punk-ma.workers.dev"
   },
   "sync": {
-    "enabled": false,
-    "endpoint": ""
+    "enabled": true,
+    "endpoint": "https://long-bird-3fba.punk-ma.workers.dev"
   },
   "audio": {
     "preferFiles": true,
