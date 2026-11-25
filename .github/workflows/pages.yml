@@ -1,5 +1,5 @@
-# 仅在「站点壳」变更时部署；data/*.json 频繁修改不会跑流水线。
-# 若只改了 JSON 也要更新线上，到 Actions 里手动 Run workflow。
+# 仅部署站点壳（html/css/js/assets/config）。
+# data/*.json 不触发流水线：线上前端直读仓库 main 的 raw JSON，push 即可生效。
 name: Deploy GitHub Pages
 
 on:
@@ -16,9 +16,9 @@ on:
   workflow_dispatch:
     inputs:
       reason:
-        description: "手动发布原因（可选）"
+        description: "手动发布壳的原因（可选）"
         required: false
-        default: "publish including latest JSON"
+        default: "manual shell deploy"
 
 permissions:
   contents: read
@@ -45,7 +45,7 @@ jobs:
       - name: Stage site files
         run: |
           mkdir -p _site
-          # 发布时仍带上当前仓库里的 data/（含 JSON），只是「纯 JSON 提交」不会触发本流水线
+          # data/ 作为 raw 失败时的回退副本一并打包
           cp -r index.html config.json css js assets data _site/
           if [ -d docs ]; then cp -r docs _site/; fi
           if [ -f README.md ]; then cp README.md _site/; fi

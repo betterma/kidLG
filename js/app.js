@@ -3,18 +3,14 @@ import { canAccessStage, getEntitlements, redeemCode, clearEntitlements, isActiv
 import { getLevelProgress, getProgress, mergeProgress, saveProgress } from "./progress.js";
 import { setSyncConfig, pullProgress } from "./sync.js";
 import { mountFitIn } from "./fitin.js";
+import { loadDataJson, loadJsonFrom, resolveDataBase } from "./dataUrl.js";
 
 const app = document.getElementById("app");
 let config = null;
 let stages = [];
 let codes = [];
 let lettersMeta = null;
-
-async function loadJson(path) {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`Failed to load ${path}`);
-  return res.json();
-}
+let dataSourceLabel = "";
 
 function edition() {
   return config?.edition || "owner";
@@ -210,6 +206,7 @@ function renderSettings() {
       </p>
       <p class="muted">激活后进度仍写本机；若配置了同步中转，会静默备份到 GitHub。</p>
       <p class="muted">同步中转：${syncOn ? "已配置" : "未启用（预留接口）"}</p>
+      <p class="muted">内容 JSON 来源：${dataSourceLabel || "—"}（改 data/*.json 推 main 即可，不必等 Pages）</p>
     </div>
 
     <div class="settings-card">
@@ -269,11 +266,13 @@ function render() {
 async function boot() {
   getVolume();
   try {
-    [config, stages, codes, lettersMeta] = await Promise.all([
-      loadJson("config.json"),
-      loadJson("data/stages.json"),
-      loadJson("data/codes.json"),
-      loadJson("data/levels/letters.json"),
+    config = await loadJsonFrom("config.json");
+    const resolved = resolveDataBase(config);
+    dataSourceLabel = resolved.remote ? `远程 ${resolved.base}` : "本地 ./";
+    [stages, codes, lettersMeta] = await Promise.all([
+      loadDataJson(config, "data/stages.json"),
+      loadDataJson(config, "data/codes.json"),
+      loadDataJson(config, "data/levels/letters.json"),
     ]);
   } catch (err) {
     app.innerHTML = `<main class="screen"><h1>加载失败</h1><p>${err.message}</p><p class="muted">若用本地文件打开，请改用本地静态服务器或 GitHub Pages。</p></main>`;

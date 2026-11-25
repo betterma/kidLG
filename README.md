@@ -18,20 +18,25 @@ python -m http.server 5173
 
 浏览器打开 `http://localhost:5173`。
 
-## GitHub Pages（Actions）
+## GitHub Pages 与内容 JSON（推荐策略）
 
-部署由 `.github/workflows/pages.yml` 完成，避免 `data/*.json` 频繁修改刷流水线。
+**壳与内容分开：**
 
-**会触发自动部署：** `html` / `css` / `js` / `assets` / `config.json` / 本 workflow  
-**不会触发：** 只改 `data/**`（含 stages、codes、关卡 JSON）、只改 `docs/**`
+| 内容 | 如何上线 | 是否跑 Actions |
+|------|----------|----------------|
+| `html` / `css` / `js` / `assets` / `config.json` | Pages 部署 | 会（路径命中才跑） |
+| `data/*.json`（价、码、关卡） | 推到 `main` 后，线上页面 **直读仓库 raw** | **不跑** |
 
-只更新了 JSON、也要刷新线上时：GitHub → Actions → **Deploy GitHub Pages** → **Run workflow**（手动跑一次，会带上最新 JSON）。
+线上默认（`config.data.source = auto`）从  
+`https://raw.githubusercontent.com/betterma/kidLG/main/`  
+拉 JSON（`cache: no-store`），失败再回退到 Pages 包里的旧 `data/`。  
+本地 `localhost` 仍读同目录 `./data/`，改完即可见。
 
-配置步骤：
+部署工作流：`.github/workflows/pages.yml`  
 
-1. Settings → Pages → Build and deployment → Source 选 **GitHub Actions**  
-2. 推送本仓库后，在 Actions 里确认首次部署成功（或手动 Run 一次）  
-3. 访问 `https://<用户名>.github.io/<仓库名>/`
+1. Settings → Pages → Source 选 **GitHub Actions**  
+2. 推送后确认 Actions 成功（或手动 Run 一次）  
+3. 访问 `https://betterma.github.io/kidLG/`
 
 ## 关键配置
 

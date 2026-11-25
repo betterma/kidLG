@@ -2,6 +2,10 @@
   "edition": "owner",
   "appName": "KidLG",
   "maxDevicesPerCode": 3,
+  "data": {
+    "source": "auto",
+    "remoteBase": "https://raw.githubusercontent.com/betterma/kidLG/main/"
+  },
   "sync": {
     "enabled": false,
     "endpoint": ""
