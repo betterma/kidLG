@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KidLG · 封存 GitHub Token</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <div id="app" style="max-width: 720px; margin: 0 auto; padding: 24px 16px">
+      <div class="card">
+        <h1>一次性封存 GitHub Token</h1>
+        <p class="muted">
+          用你自己设的口令加密 Token，生成密文后粘贴进
+          <code>github-token-vault.js</code> 的 <code>EMBEDDED_BLOB</code>。
+          明文 Token 不要提交到仓库。
+        </p>
+        <label>
+          GitHub Token（Fine-grained，Contents 读写，仅 kidLG 仓库）
+          <input id="token" type="password" autocomplete="off" placeholder="github_pat_…" />
+        </label>
+        <label style="margin-top: 12px; display: grid; gap: 6px">
+          管理口令（以后打开后台用这个，不是 Token 本身）
+          <input id="pass" type="password" autocomplete="new-password" />
+        </label>
+        <label style="margin-top: 12px; display: grid; gap: 6px">
+          再输入一次口令
+          <input id="pass2" type="password" autocomplete="new-password" />
+        </label>
+        <div class="row" style="margin-top: 14px">
+          <button type="button" class="btn btn-primary" id="seal">生成密文</button>
+          <a class="btn btn-ghost" href="./">返回后台</a>
+        </div>
+        <p id="msg" class="msg"></p>
+        <label style="margin-top: 12px; display: grid; gap: 6px">
+          生成结果（整段复制）
+          <textarea id="out" readonly placeholder="生成后显示在这里"></textarea>
+        </label>
+        <p class="muted">
+          复制后打开 <code>admin/github-token-vault.js</code>，把
+          <code>export const EMBEDDED_BLOB = "";</code>
+          改成
+          <code>export const EMBEDDED_BLOB = "这里粘贴";</code>
+          再 git push。
+        </p>
+      </div>
+    </div>
+    <script type="module">
+      import { sealToken } from "./github-token-vault.js";
+
+      document.getElementById("seal").addEventListener("click", async () => {
+        const token = document.getElementById("token").value.trim();
+        const pass = document.getElementById("pass").value;
+        const pass2 = document.getElementById("pass2").value;
+        const msg = document.getElementById("msg");
+        msg.className = "msg";
+        if (!token) {
+          msg.textContent = "请填写 Token";
+          msg.className = "msg bad";
+          return;
+        }
+        if (!pass || pass.length < 6) {
+          msg.textContent = "口令至少 6 位";
+          msg.className = "msg bad";
+          return;
+        }
+        if (pass !== pass2) {
+          msg.textContent = "两次口令不一致";
+          msg.className = "msg bad";
+          return;
+        }
+        try {
+          const blob = await sealToken(token, pass);
+          document.getElementById("out").value = blob;
+          msg.textContent = "已生成。请复制密文写入 github-token-vault.js 后推送仓库。";
+          msg.className = "msg ok";
+        } catch (err) {
+          msg.textContent = err.message || "生成失败";
+          msg.className = "msg bad";
+        }
+      });
+    </script>
+  </body>
+</html>

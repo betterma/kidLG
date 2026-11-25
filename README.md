@@ -11,7 +11,7 @@ npx --yes serve -l 5173
 ```
 
 - 前台：`http://localhost:5173/`
-- 后台：`http://localhost:5173/admin/`（口令见 `config.json` → `admin.passphrase`，默认 `kidlg-admin`）
+- 后台：`http://localhost:5173/admin/`（需先用 `admin/vault-seal.html` 封存 Token，见 `admin/README.md`）
 
 ## 功能概览
 
@@ -34,13 +34,13 @@ Pages Source 请选 **GitHub Actions**。
 
 ## 后台发码流程（当前）
 
-1. 打开 `/admin/`，口令登录  
-2. **费用配置**：改价格/免费收费 → 下载 `stages.json` → 覆盖 `data/stages.json` → push  
-3. **付费发码**：勾选世界、登记渠道与金额 → 生成一次性激活码 → 复制发给用户  
-4. 下载 `codes.json` → 覆盖 `data/codes.json` → push（用户端即可兑换）  
-5. 微信/支付宝自动收款回调：以后接到同一「生成激活码」逻辑；现为人工登记
+1. 首次：`/admin/vault-seal.html` 用 GitHub Token + 自设口令生成密文，写入 `github-token-vault.js` 并 push  
+2. 打开 `/admin/`，用**管理口令**解锁（不是 Token）  
+3. **费用配置** / **付费发码** → 点 **推送到 GitHub**（直接改仓库 `data/*.json`）  
+4. 复制激活码发给用户；用户开通时由 Worker 把码标为 `used`  
+5. 微信/支付宝自动收款以后再接到同一发码逻辑  
 
-请尽快修改默认口令 `kidlg-admin`。
+详见 `admin/README.md`。
 
 ## 激活码全局作废（必做）
 

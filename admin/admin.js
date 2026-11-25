@@ -1,7 +1,17 @@
+import {
+  EMBEDDED_BLOB,
+  clearRememberedPassword,
+  getMemoryToken,
+  isVaultSealed,
+  lockVault,
+  tryAutoUnlock,
+  unlockVault,
+} from "./github-token-vault.js";
+import { parseRepoFromConfig, putRepoJson } from "./github-api.js";
+
 const STORAGE_STAGES = "kidlg-admin:stages";
 const STORAGE_CODES = "kidlg-admin:codes";
 const STORAGE_ORDERS = "kidlg-admin:orders";
-const STORAGE_AUTH = "kidlg-admin:authed";
 
 const app = document.getElementById("app");
 
@@ -11,6 +21,7 @@ let codes = [];
 let orders = [];
 let tab = "pricing";
 let lastIssued = null;
+let repoInfo = null;
 
 async function fetchJson(url) {
   const res = await fetch(url, { cache: "no-store" });
@@ -63,46 +74,83 @@ function stageName(id) {
   return stages.find((s) => s.stageId === id)?.name || id;
 }
 
+async function pushJsonToGitHub(filePath, data, message) {
+  const token = getMemoryToken();
+  if (!token) throw new Error("未解锁，无法写入 GitHub");
+  await putRepoJson(token, repoInfo, filePath, data, message);
+}
+
 async function boot() {
   try {
     config = await fetchJson("../config.json");
+    repoInfo = parseRepoFromConfig(config);
   } catch (err) {
     app.innerHTML = `<div class="card"><h1>加载失败</h1><p>${err.message}</p></div>`;
     return;
   }
 
-  if (sessionStorage.getItem(STORAGE_AUTH) === "1") {
+  if (!isVaultSealed()) {
+    renderNeedSeal();
+    return;
+  }
+
+  if (getMemoryToken() || (await tryAutoUnlock())) {
     await enterApp();
     return;
   }
   renderGate();
 }
 
+function renderNeedSeal() {
+  app.innerHTML = `
+    <div class="card gate">
+      <h1>尚未封存管理密钥</h1>
+      <p class="muted">
+        公开仓库里不再放明文口令。请先用你的 GitHub Token + 自设口令生成密文，
+        写入 <code>github-token-vault.js</code> 的 <code>EMBEDDED_BLOB</code> 后再打开后台。
+      </p>
+      <div class="row">
+        <a class="btn btn-primary" href="./vault-seal.html">去封存 Token</a>
+        <a class="btn btn-ghost" href="../">返回前台</a>
+      </div>
+      <p class="muted" style="margin-top:12px">当前 EMBEDDED_BLOB 长度：${String(EMBEDDED_BLOB || "").length}</p>
+    </div>
+  `;
+}
+
 function renderGate() {
   app.innerHTML = `
     <div class="card gate">
       <h1>KidLG 管理后台</h1>
-      <p class="muted">请输入管理口令（在 config.json 的 admin.passphrase）</p>
+      <p class="muted">输入封存时设置的口令，解密出 GitHub Token（仅存于本页内存）。别人打开页面没有口令无法操作仓库。</p>
       <div class="row">
         <label style="flex:1">
-          口令
+          管理口令
           <input id="pass" type="password" autocomplete="current-password" />
         </label>
       </div>
-      <button type="button" class="btn btn-primary" id="login">进入</button>
+      <label class="check" style="margin:10px 0">
+        <input id="remember" type="checkbox" />
+        记住口令（仅本机；保存的是口令不是 Token）
+      </label>
+      <button type="button" class="btn btn-primary" id="login">解锁进入</button>
       <p id="gate-msg" class="msg"></p>
+      <p class="muted"><a href="./vault-seal.html">重新封存 Token</a></p>
     </div>
   `;
-  const go = () => {
+  const go = async () => {
     const pass = app.querySelector("#pass").value;
-    const expect = config?.admin?.passphrase || "";
-    if (!expect || pass !== expect) {
-      app.querySelector("#gate-msg").textContent = "口令错误";
-      app.querySelector("#gate-msg").className = "msg bad";
-      return;
+    const remember = app.querySelector("#remember").checked;
+    const msg = app.querySelector("#gate-msg");
+    msg.textContent = "解锁中…";
+    msg.className = "msg";
+    try {
+      await unlockVault(pass, { remember });
+      await enterApp();
+    } catch (err) {
+      msg.textContent = err.message || "解锁失败";
+      msg.className = "msg bad";
     }
-    sessionStorage.setItem(STORAGE_AUTH, "1");
-    enterApp();
   };
   app.querySelector("#login").addEventListener("click", go);
   app.querySelector("#pass").addEventListener("keydown", (e) => {
@@ -147,11 +195,11 @@ function render() {
     <div class="top">
       <div>
         <h1>KidLG 管理后台</h1>
-        <p class="muted">配置费用 · 登记收款 · 生成并分发激活码。导出 JSON 后提交到仓库 data/ 即可生效。</p>
+        <p class="muted">配置费用 · 登记收款 · 生成激活码。可直接推送到 GitHub（需已解锁保险库）。</p>
       </div>
       <div class="row">
         <a class="btn btn-ghost" href="../">返回前台</a>
-        <button type="button" class="btn btn-ghost" id="logout">退出</button>
+        <button type="button" class="btn btn-ghost" id="logout">锁定退出</button>
       </div>
     </div>
     <div class="tabs">
@@ -170,7 +218,8 @@ function render() {
     });
   });
   app.querySelector("#logout").addEventListener("click", () => {
-    sessionStorage.removeItem(STORAGE_AUTH);
+    lockVault();
+    clearRememberedPassword();
     renderGate();
   });
 
@@ -216,7 +265,7 @@ function renderPricing(panel) {
   panel.innerHTML = `
     <div class="card">
       <h2>世界费用与上架</h2>
-      <p class="muted">字母世界建议保持免费。改完后下载 stages.json，覆盖仓库 data/stages.json 并 push。</p>
+      <p class="muted">字母世界建议保持免费。改完后推送到 GitHub，前台会读到最新价格。</p>
       <div style="overflow-x:auto">
         <table>
           <thead>
@@ -228,9 +277,10 @@ function renderPricing(panel) {
         </table>
       </div>
       <div class="row">
-        <button type="button" class="btn btn-primary" id="save-stages">保存到浏览器草稿</button>
+        <button type="button" class="btn btn-primary" id="push-stages">推送到 GitHub</button>
         <button type="button" class="btn btn-wood" id="dl-stages">下载 stages.json</button>
-        <button type="button" class="btn btn-ghost" id="reload-stages">从仓库重新加载</button>
+        <button type="button" class="btn btn-ghost" id="save-stages">保存本机草稿</button>
+        <button type="button" class="btn btn-ghost" id="reload-stages">重新加载</button>
       </div>
       <p id="pricing-msg" class="msg"></p>
     </div>
@@ -271,7 +321,17 @@ function renderPricing(panel) {
   panel.querySelector("#dl-stages").addEventListener("click", () => {
     persist();
     downloadJson("stages.json", stages);
-    setMsg("pricing-msg", "已下载。请覆盖 data/stages.json 后 git push。", true);
+    setMsg("pricing-msg", "已下载 stages.json", true);
+  });
+  panel.querySelector("#push-stages").addEventListener("click", async () => {
+    persist();
+    setMsg("pricing-msg", "正在推送…", true);
+    try {
+      await pushJsonToGitHub("data/stages.json", stages, "chore(admin): update stages pricing");
+      setMsg("pricing-msg", "已推送到 GitHub data/stages.json", true);
+    } catch (err) {
+      setMsg("pricing-msg", err.message || "推送失败", false);
+    }
   });
   panel.querySelector("#reload-stages").addEventListener("click", async () => {
     stages = await fetchJson("../data/stages.json");
@@ -326,6 +386,7 @@ function renderIssue(panel) {
         <div class="code-box" id="issued-codes"></div>
         <div class="row">
           <button type="button" class="btn btn-ghost" id="copy-codes">复制激活码</button>
+          <button type="button" class="btn btn-primary" id="push-codes-now">推送到 GitHub</button>
           <button type="button" class="btn btn-wood" id="dl-codes-now">下载 codes.json</button>
         </div>
       </div>
@@ -402,7 +463,17 @@ function renderIssue(panel) {
   });
   panel.querySelector("#dl-codes-now")?.addEventListener("click", () => {
     downloadJson("codes.json", codes);
-    setMsg("issue-msg", "已下载 codes.json，请覆盖 data/codes.json 后 push", true);
+    setMsg("issue-msg", "已下载 codes.json", true);
+  });
+  panel.querySelector("#push-codes-now")?.addEventListener("click", async () => {
+    persist();
+    setMsg("issue-msg", "正在推送激活码库…", true);
+    try {
+      await pushJsonToGitHub("data/codes.json", codes, "chore(admin): issue activation codes");
+      setMsg("issue-msg", "已推送到 GitHub。用户现在可以用这些激活码开通。", true);
+    } catch (err) {
+      setMsg("issue-msg", err.message || "推送失败", false);
+    }
   });
 }
 
@@ -434,9 +505,10 @@ function renderCodes(panel) {
     <div class="card">
       <h2>激活码库（草稿 ${codes.length} 条）</h2>
       <div class="row">
-        <button type="button" class="btn btn-primary" id="save-codes">保存草稿</button>
+        <button type="button" class="btn btn-primary" id="push-codes">推送到 GitHub</button>
         <button type="button" class="btn btn-wood" id="dl-codes">下载 codes.json</button>
-        <button type="button" class="btn btn-ghost" id="reload-codes">从仓库重新加载</button>
+        <button type="button" class="btn btn-ghost" id="save-codes">保存本机草稿</button>
+        <button type="button" class="btn btn-ghost" id="reload-codes">重新加载</button>
       </div>
       <p id="codes-msg" class="msg"></p>
       <div style="overflow-x:auto;margin-top:12px">
@@ -455,7 +527,17 @@ function renderCodes(panel) {
   panel.querySelector("#dl-codes").addEventListener("click", () => {
     persist();
     downloadJson("codes.json", codes);
-    setMsg("codes-msg", "已下载，请覆盖 data/codes.json 后 push", true);
+    setMsg("codes-msg", "已下载", true);
+  });
+  panel.querySelector("#push-codes").addEventListener("click", async () => {
+    persist();
+    setMsg("codes-msg", "正在推送…", true);
+    try {
+      await pushJsonToGitHub("data/codes.json", codes, "chore(admin): update activation codes");
+      setMsg("codes-msg", "已推送到 GitHub data/codes.json", true);
+    } catch (err) {
+      setMsg("codes-msg", err.message || "推送失败", false);
+    }
   });
   panel.querySelector("#reload-codes").addEventListener("click", async () => {
     codes = await fetchJson("../data/codes.json");

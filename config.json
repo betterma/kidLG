@@ -1,9 +1,6 @@
 {
   "appName": "KidLG",
   "maxDevicesPerCode": 1,
-  "admin": {
-    "passphrase": "kidlg-admin"
-  },
   "data": {
     "source": "auto",
     "remoteBase": "https://raw.githubusercontent.com/betterma/kidLG/main/"
