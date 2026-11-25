@@ -57,7 +57,7 @@ Pages Source 请选 **GitHub Actions**。
 | `data/codes.json` | 激活码 |
 | `data/levels/letters.json` | 字母关卡（大小写两组） |
 
-演示码：`DEMO-PINYIN-0001`、`DEMO-ALL-0001`（一次性）
+演示码：`DEMO-PINYIN-0001`、`DEMO-ALL-0001`（兑一次后远程 `status: used`）
 
 ## 文档
 
