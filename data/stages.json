@@ -1,0 +1,52 @@
+[
+  {
+    "stageId": "world.letters",
+    "name": "英文字母世界",
+    "sortOrder": 1,
+    "listed": true,
+    "access": "free",
+    "priceYuan": null,
+    "validity": { "type": "lifetime" },
+    "levelGroupIds": ["letters"]
+  },
+  {
+    "stageId": "world.pinyin",
+    "name": "拼音世界",
+    "sortOrder": 2,
+    "listed": true,
+    "access": "paid",
+    "priceYuan": 29.9,
+    "validity": { "type": "lifetime" },
+    "levelGroupIds": ["pinyin"]
+  },
+  {
+    "stageId": "world.hanzi",
+    "name": "汉字世界",
+    "sortOrder": 3,
+    "listed": true,
+    "access": "paid",
+    "priceYuan": 39.9,
+    "validity": { "type": "lifetime" },
+    "levelGroupIds": ["hanzi"]
+  },
+  {
+    "stageId": "world.words",
+    "name": "单词拼写世界",
+    "sortOrder": 4,
+    "listed": true,
+    "access": "paid",
+    "priceYuan": 29.9,
+    "validity": { "type": "lifetime" },
+    "levelGroupIds": ["words"]
+  },
+  {
+    "stageId": "world.phrases",
+    "name": "汉字词语世界",
+    "sortOrder": 5,
+    "listed": true,
+    "access": "paid",
+    "priceYuan": 29.9,
+    "validity": { "type": "lifetime" },
+    "levelGroupIds": ["phrases"]
+  }
+]

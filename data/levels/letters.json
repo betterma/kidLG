@@ -1,0 +1,7 @@
+{
+  "groupId": "letters",
+  "stageId": "world.letters",
+  "template": "fit-in",
+  "theme": "wooden-wall",
+  "letters": "abcdefghijklmnopqrstuvwxyz"
+}

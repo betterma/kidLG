@@ -1,0 +1,24 @@
+[
+  {
+    "code": "DEMO-PINYIN-0001",
+    "stages": ["world.pinyin"],
+    "status": "unused",
+    "validity": { "type": "lifetime" },
+    "activatedAt": null,
+    "expireAt": null,
+    "deviceIds": [],
+    "createdAt": "2026-11-25T00:00:00.000Z",
+    "note": "演示码：开通拼音世界"
+  },
+  {
+    "code": "DEMO-ALL-0001",
+    "stages": ["world.pinyin", "world.hanzi", "world.words", "world.phrases"],
+    "status": "unused",
+    "validity": { "type": "lifetime" },
+    "activatedAt": null,
+    "expireAt": null,
+    "deviceIds": [],
+    "createdAt": "2026-11-25T00:00:00.000Z",
+    "note": "演示码：开通全部收费世界"
+  }
+]

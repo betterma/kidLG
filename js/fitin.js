@@ -1,0 +1,222 @@
+import { playGlyph, playGlyphRepeat, playPop, unlockAudio } from "./audio.js";
+import { recordAttempt, recordClear } from "./progress.js";
+
+export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRepeat = 3, audioOpts }) {
+  const letter = String(glyph).toLowerCase();
+  root.innerHTML = `
+    <div class="play-wrap">
+      <p class="play-hint" data-hint>点一下字母听发音，再拖进木墙上的缺口</p>
+      <div class="wood-stage" data-stage>
+        <div class="slot" data-slot>
+          <span class="slot-glyph">${letter}</span>
+        </div>
+        <div class="piece" data-piece style="left:18%;bottom:12%;top:auto;">
+          <span class="piece-glyph">${letter}</span>
+        </div>
+        <div class="confetti-layer" data-confetti></div>
+        <div class="success-overlay" data-success>
+          <div class="success-card">
+            <h2>太棒了！</h2>
+            <p>认识字母 <strong>${letter}</strong></p>
+            <div class="success-actions">
+              <button type="button" class="btn btn-wood" data-again>再玩一次</button>
+              <button type="button" class="btn btn-primary" data-next>下一关</button>
+              <button type="button" class="btn btn-ghost" data-back>关卡列表</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const stage = root.querySelector("[data-stage]");
+  const slot = root.querySelector("[data-slot]");
+  const piece = root.querySelector("[data-piece]");
+  const hint = root.querySelector("[data-hint]");
+  const success = root.querySelector("[data-success]");
+  const confetti = root.querySelector("[data-confetti]");
+
+  let dragging = false;
+  let pointerId = null;
+  let startX = 0;
+  let startY = 0;
+  let originLeft = 0;
+  let originTop = 0;
+  let home = { left: 0.18, top: 0.72 };
+  let cleared = false;
+  let missCount = 0;
+
+  function stageRect() {
+    return stage.getBoundingClientRect();
+  }
+
+  /** 吸附半径随木墙尺寸缩放，小屏更好拖进 */
+  function effectiveSnap() {
+    const w = stageRect().width || 320;
+    const scaled = snapDistance * (w / 420);
+    return Math.max(44, Math.min(96, scaled));
+  }
+
+  function setPieceRatio(leftRatio, topRatio) {
+    const r = stageRect();
+    const pw = piece.offsetWidth;
+    const ph = piece.offsetHeight;
+    const maxL = Math.max(0, r.width - pw);
+    const maxT = Math.max(0, r.height - ph);
+    const left = Math.min(maxL, Math.max(0, leftRatio * r.width));
+    const top = Math.min(maxT, Math.max(0, topRatio * r.height));
+    piece.style.left = `${left}px`;
+    piece.style.top = `${top}px`;
+    piece.style.bottom = "auto";
+  }
+
+  function pieceCenter() {
+    const pr = piece.getBoundingClientRect();
+    return { x: pr.left + pr.width / 2, y: pr.top + pr.height / 2 };
+  }
+
+  function slotCenter() {
+    const sr = slot.getBoundingClientRect();
+    return { x: sr.left + sr.width / 2, y: sr.top + sr.height / 2 };
+  }
+
+  function dist(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  function dockToSlot() {
+    const sr = slot.getBoundingClientRect();
+    const st = stageRect();
+    const left = sr.left - st.left + (sr.width - piece.offsetWidth) / 2;
+    const top = sr.top - st.top + (sr.height - piece.offsetHeight) / 2;
+    piece.style.left = `${left}px`;
+    piece.style.top = `${top}px`;
+    piece.style.bottom = "auto";
+    piece.classList.add("is-docked");
+    slot.classList.add("is-filled");
+    slot.classList.remove("is-hot");
+  }
+
+  function spawnConfetti() {
+    confetti.innerHTML = "";
+    const colors = ["#f2c14e", "#7bc47f", "#f07167", "#5b8def", "#f4a261", "#e9c46a"];
+    for (let i = 0; i < 36; i++) {
+      const el = document.createElement("span");
+      el.className = "confetti";
+      el.style.left = `${Math.random() * 100}%`;
+      el.style.background = colors[i % colors.length];
+      el.style.animationDelay = `${Math.random() * 0.35}s`;
+      el.style.transform = `rotate(${Math.random() * 180}deg)`;
+      confetti.appendChild(el);
+    }
+  }
+
+  async function onSuccess() {
+    if (cleared) return;
+    cleared = true;
+    recordClear(levelId, 1);
+    dockToSlot();
+    playPop();
+    hint.textContent = "拼好啦！";
+    spawnConfetti();
+    success.classList.add("is-on");
+    await playGlyphRepeat(letter, successRepeat, audioOpts);
+  }
+
+  function onPointerDown(e) {
+    if (cleared || dragging) return;
+    unlockAudio();
+    dragging = true;
+    pointerId = e.pointerId;
+    piece.classList.add("is-dragging");
+    document.body.classList.add("is-dragging-piece");
+    try {
+      piece.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    const pr = piece.getBoundingClientRect();
+    const st = stageRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    originLeft = pr.left - st.left;
+    originTop = pr.top - st.top;
+    playGlyph(letter, audioOpts);
+    recordAttempt(levelId);
+    e.preventDefault();
+  }
+
+  function onPointerMove(e) {
+    if (!dragging || cleared) return;
+    if (pointerId != null && e.pointerId !== pointerId) return;
+    const st = stageRect();
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    let left = originLeft + dx;
+    let top = originTop + dy;
+    left = Math.max(0, Math.min(st.width - piece.offsetWidth, left));
+    top = Math.max(0, Math.min(st.height - piece.offsetHeight, top));
+    piece.style.left = `${left}px`;
+    piece.style.top = `${top}px`;
+    piece.style.bottom = "auto";
+    const snap = effectiveSnap();
+    slot.classList.toggle("is-hot", dist(pieceCenter(), slotCenter()) <= snap * 1.35);
+    e.preventDefault();
+  }
+
+  function onPointerUp(e) {
+    if (!dragging || cleared) return;
+    if (pointerId != null && e.pointerId !== pointerId) return;
+    dragging = false;
+    pointerId = null;
+    piece.classList.remove("is-dragging");
+    document.body.classList.remove("is-dragging-piece");
+    const snap = effectiveSnap();
+    if (dist(pieceCenter(), slotCenter()) <= snap) {
+      onSuccess();
+      return;
+    }
+    missCount += 1;
+    setPieceRatio(home.left, home.top);
+    slot.classList.remove("is-hot");
+    hint.textContent = missCount >= 2 ? "把字母拖到上面凹进去的地方～" : "再靠近一点缺口再松手";
+  }
+
+  function onResize() {
+    if (cleared) {
+      dockToSlot();
+      return;
+    }
+    if (!dragging) setPieceRatio(home.left, home.top);
+  }
+
+  piece.addEventListener("pointerdown", onPointerDown);
+  piece.addEventListener("pointermove", onPointerMove);
+  piece.addEventListener("pointerup", onPointerUp);
+  piece.addEventListener("pointercancel", onPointerUp);
+  window.addEventListener("resize", onResize);
+  window.addEventListener("orientationchange", onResize);
+
+  root.querySelector("[data-again]").addEventListener("click", () => {
+    cleanup();
+    location.hash = `#/play/letters/${letter}?r=${Date.now()}`;
+  });
+  root.querySelector("[data-next]").addEventListener("click", () => {
+    cleanup();
+    const next = String.fromCharCode(letter.charCodeAt(0) + 1);
+    if (next > "z") location.hash = "#/letters";
+    else location.hash = `#/play/letters/${next}`;
+  });
+  root.querySelector("[data-back]").addEventListener("click", () => {
+    cleanup();
+    location.hash = "#/letters";
+  });
+
+  function cleanup() {
+    window.removeEventListener("resize", onResize);
+    window.removeEventListener("orientationchange", onResize);
+    document.body.classList.remove("is-dragging-piece");
+  }
+
+  requestAnimationFrame(() => setPieceRatio(home.left, home.top));
+}

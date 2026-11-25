@@ -1,0 +1,17 @@
+{
+  "edition": "owner",
+  "appName": "KidLG",
+  "maxDevicesPerCode": 3,
+  "sync": {
+    "enabled": false,
+    "endpoint": ""
+  },
+  "audio": {
+    "preferFiles": true,
+    "speechFallback": true,
+    "successRepeat": 3
+  },
+  "fitIn": {
+    "snapDistance": 56
+  }
+}
