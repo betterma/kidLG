@@ -1,9 +1,13 @@
 [
   {
     "code": "DEMO-PINYIN-0001",
-    "stages": ["world.pinyin"],
+    "stages": [
+      "world.pinyin"
+    ],
     "status": "unused",
-    "validity": { "type": "lifetime" },
+    "validity": {
+      "type": "lifetime"
+    },
     "activatedAt": null,
     "expireAt": null,
     "deviceIds": [],
@@ -12,12 +16,21 @@
   },
   {
     "code": "DEMO-ALL-0001",
-    "stages": ["world.pinyin", "world.hanzi", "world.words", "world.phrases"],
-    "status": "unused",
-    "validity": { "type": "lifetime" },
-    "activatedAt": null,
+    "stages": [
+      "world.pinyin",
+      "world.hanzi",
+      "world.words",
+      "world.phrases"
+    ],
+    "status": "used",
+    "validity": {
+      "type": "lifetime"
+    },
+    "activatedAt": "2026-11-25T11:47:36.347Z",
     "expireAt": null,
-    "deviceIds": [],
+    "deviceIds": [
+      "5c522534-4b0f-4f2a-994e-5677010864fc"
+    ],
     "createdAt": "2026-11-25T00:00:00.000Z",
     "note": "演示码：开通全部收费世界（一次性）"
   }
