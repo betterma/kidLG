@@ -8,6 +8,9 @@
     "source": "auto",
     "remoteBase": "https://raw.githubusercontent.com/betterma/kidLG/main/"
   },
+  "license": {
+    "endpoint": ""
+  },
   "sync": {
     "enabled": false,
     "endpoint": ""

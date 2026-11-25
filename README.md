@@ -42,6 +42,12 @@ Pages Source 请选 **GitHub Actions**。
 
 请尽快修改默认口令 `kidlg-admin`。
 
+## 激活码全局作废（必做）
+
+纯静态页无法安全改 GitHub。需部署 `sync/worker`（免费 Cloudflare Worker），密钥只放 Worker，数据仍在本仓库。  
+
+步骤见 **[sync/README.md](sync/README.md)**：创建 PAT → `wrangler deploy` → 把 Worker 地址写入 `config.json` 的 `license.endpoint`。
+
 ## 关键文件
 
 | 文件 | 作用 |

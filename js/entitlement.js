@@ -1,7 +1,6 @@
 import { getDeviceId, loadJson, saveJson } from "./storage.js";
 
 const KEY = "entitlements";
-const CONSUMED_KEY = "consumedCodes";
 
 export function getEntitlements() {
   return loadJson(KEY, null);
@@ -10,31 +9,6 @@ export function getEntitlements() {
 export function isActivated() {
   const e = getEntitlements();
   return !!(e && e.status === "active" && !isExpired(e.expireAt));
-}
-
-function getConsumedCodes() {
-  const list = loadJson(CONSUMED_KEY, []);
-  return Array.isArray(list) ? list.map((c) => String(c).toUpperCase()) : [];
-}
-
-function markConsumed(code) {
-  const normalized = String(code).trim().toUpperCase();
-  const list = getConsumedCodes();
-  if (!list.includes(normalized)) {
-    list.push(normalized);
-    saveJson(CONSUMED_KEY, list);
-  }
-}
-
-function computeExpireAt(validity, fromDate = new Date()) {
-  if (!validity || validity.type === "lifetime") return null;
-  if (validity.type === "fixed_date") return validity.until;
-  if (validity.type === "days_from_activate") {
-    const d = new Date(fromDate);
-    d.setDate(d.getDate() + (validity.days || 0));
-    return d.toISOString();
-  }
-  return null;
 }
 
 function isExpired(expireAt) {
@@ -54,49 +28,58 @@ export async function hashCode(code) {
   return h.toString(16).padStart(8, "0");
 }
 
+function licenseEndpoint(config) {
+  return (config?.license?.endpoint || config?.sync?.endpoint || "").replace(/\/$/, "");
+}
+
 /**
- * 激活码一次性：兑换成功后记入本机已用列表，同一浏览器不可再兑。
- * 跨设备全局作废需后端；静态站阶段以本机作废为准。
+ * 激活必须走 GitHub 中转 API：远程把 codes.json 里该码标为 used。
+ * 换浏览器也无法再兑同一码。
  */
-export async function redeemCode(rawCode, codesList) {
+export async function redeemCode(rawCode, _codesList, config) {
   const code = String(rawCode || "").trim().toUpperCase();
   if (!code) return { ok: false, message: "请输入激活码" };
 
-  if (getConsumedCodes().includes(code)) {
-    return { ok: false, message: "激活码已使用" };
+  const endpoint = licenseEndpoint(config);
+  if (!endpoint) {
+    return {
+      ok: false,
+      message: "激活服务未配置，请稍后再试",
+    };
   }
 
-  const found = (codesList || []).find((c) => String(c.code).toUpperCase() === code);
-  if (!found) return { ok: false, message: "激活码无效" };
-  if (found.status === "revoked" || found.status === "used") {
-    return { ok: false, message: "激活码已作废" };
+  let res;
+  try {
+    res = await fetch(`${endpoint}/redeem`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, deviceId: getDeviceId() }),
+    });
+  } catch {
+    return { ok: false, message: "网络异常，请稍后重试" };
   }
 
-  const now = new Date();
-  let expireAt = found.expireAt;
-  if (!expireAt) expireAt = computeExpireAt(found.validity, now);
-  if (found.status === "expired" || isExpired(expireAt)) {
-    return { ok: false, message: "激活码已过期" };
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    return { ok: false, message: "激活服务异常" };
   }
 
-  const existing = getEntitlements();
-  const mergedStages = new Set([...(existing?.stages || []), ...(found.stages || [])]);
+  if (!res.ok || !data?.ok) {
+    return { ok: false, message: data?.message || "激活失败" };
+  }
 
-  const entitlements = {
-    code: found.code,
-    stages: [...mergedStages],
-    expireAt,
-    deviceId: getDeviceId(),
-    status: "active",
-    codeHash: await hashCode(found.code),
-  };
-
-  markConsumed(found.code);
+  const entitlements = data.entitlements;
+  if (!entitlements?.codeHash && entitlements?.code) {
+    entitlements.codeHash = await hashCode(entitlements.code);
+  }
+  entitlements.deviceId = entitlements.deviceId || getDeviceId();
   saveJson(KEY, entitlements);
-  return { ok: true, entitlements, message: "开通成功" };
+  return { ok: true, entitlements, message: data.message || "开通成功" };
 }
 
-/** 仅按免费世界 / 已开通世界门禁，无全开模式 */
+/** 仅按免费世界 / 已开通世界门禁 */
 export function canAccessStage(stage) {
   if (!stage) return false;
   if (stage.access === "free") return true;

@@ -218,7 +218,7 @@ function renderSettings() {
   app.querySelector("#redeem-btn").addEventListener("click", async () => {
     unlockAudio();
     const raw = app.querySelector("#code-input").value;
-    const result = await redeemCode(raw, codes);
+    const result = await redeemCode(raw, codes, config);
     const msg = app.querySelector("#redeem-msg");
     msg.textContent = result.message;
     msg.className = result.ok ? "status-ok" : "status-bad";
@@ -285,6 +285,13 @@ async function boot() {
     app.innerHTML = `<main class="screen"><h1>加载失败</h1><p>请检查网络后重试</p></main>`;
     console.error(err);
     return;
+  }
+  // 激活中转与进度同步共用同一 GitHub Worker 地址
+  if (config.license?.endpoint) {
+    config.sync = {
+      enabled: true,
+      endpoint: config.sync?.endpoint || config.license.endpoint,
+    };
   }
   setSyncConfig(config.sync || {});
   window.addEventListener("hashchange", render);

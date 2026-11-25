@@ -48,7 +48,8 @@ export async function pullProgress() {
     `${configRef.endpoint.replace(/\/$/, "")}/progress/${encodeURIComponent(e.codeHash)}`
   );
   if (!res.ok) return null;
-  return res.json();
+  const data = await res.json();
+  return data?.progress || data;
 }
 
 /** 清除云端进度；无中转时返回 false（表示未真正清云） */

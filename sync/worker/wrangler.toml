@@ -1,0 +1,20 @@
+name = "kidlg-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# 部署后把 workers.dev 地址填进仓库根目录 config.json：
+#   license.endpoint / sync.endpoint
+#
+# 密钥（wrangler secret put）：
+#   GITHUB_TOKEN   — fine-grained PAT，权限 Contents: Read and write，仅本仓库
+# 可选用 vars（也可全放 secret）：
+#   GITHUB_OWNER=betterma
+#   GITHUB_REPO=kidLG
+#   GITHUB_BRANCH=main
+
+[vars]
+GITHUB_OWNER = "betterma"
+GITHUB_REPO = "kidLG"
+GITHUB_BRANCH = "main"
+CODES_PATH = "data/codes.json"
+PROGRESS_DIR = "data/progress"
