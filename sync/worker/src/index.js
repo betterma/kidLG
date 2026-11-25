@@ -18,6 +18,13 @@ export default {
       const url = new URL(request.url);
       const path = url.pathname.replace(/\/+$/, "") || "/";
 
+      if ((path === "/" || path === "") && request.method === "GET") {
+        return json({
+          ok: true,
+          service: "kidlg-api",
+          routes: ["/health", "POST /redeem", "PUT /progress", "GET|DELETE /progress/:hash"],
+        });
+      }
       if (path === "/health" && request.method === "GET") {
         return json({ ok: true });
       }
