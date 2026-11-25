@@ -251,13 +251,17 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, audioOpts 
 
   root.querySelector("[data-again]").addEventListener("click", () => {
     cleanup();
-    location.hash = `#/play/letters/${letter}?r=${Date.now()}`;
+    location.hash = `#/play/letters/${encodeURIComponent(letter)}?r=${Date.now()}`;
   });
   root.querySelector("[data-next]").addEventListener("click", () => {
     cleanup();
-    const next = String.fromCharCode(letter.charCodeAt(0) + 1);
-    if (next > "z") location.hash = "#/letters";
-    else location.hash = `#/play/letters/${next}`;
+    const code = letter.charCodeAt(0);
+    let next = null;
+    if (code >= 97 && code < 122) next = String.fromCharCode(code + 1);
+    else if (code === 122) next = "A";
+    else if (code >= 65 && code < 90) next = String.fromCharCode(code + 1);
+    if (!next) location.hash = "#/letters";
+    else location.hash = `#/play/letters/${encodeURIComponent(next)}`;
   });
   root.querySelector("[data-back]").addEventListener("click", () => {
     cleanup();

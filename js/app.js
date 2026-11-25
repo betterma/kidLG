@@ -1,7 +1,13 @@
-import { getVolume, setVolume, unlockAudio } from "./audio.js";
+import { unlockAudio } from "./audio.js";
 import { canAccessStage, getEntitlements, redeemCode, isActivated } from "./entitlement.js";
-import { getLevelProgress, getProgress, mergeProgress, saveProgress } from "./progress.js";
-import { setSyncConfig, pullProgress } from "./sync.js";
+import {
+  getLevelProgress,
+  getProgress,
+  mergeProgress,
+  saveProgress,
+  clearAllProgress,
+} from "./progress.js";
+import { setSyncConfig, pullProgress, isSyncEnabled } from "./sync.js";
 import { mountFitIn } from "./fitin.js";
 import { loadDataJson, loadJsonFrom, resolveDataBase } from "./dataUrl.js";
 
@@ -31,6 +37,12 @@ function shell(content, { showBack = false, backHash = "#/" } = {}) {
   `;
 }
 
+function letterGroups() {
+  if (lettersMeta?.groups?.length) return lettersMeta.groups;
+  const legacy = lettersMeta?.letters || "abcdefghijklmnopqrstuvwxyz";
+  return [{ id: "lower", title: "小写字母", letters: legacy }];
+}
+
 function renderMap() {
   const nodes = [...stages]
     .filter((s) => s.listed)
@@ -47,11 +59,7 @@ function renderMap() {
         ? `<span class="badge">可进入</span>`
         : `<span class="badge badge-lock">🔒 ${price}</span>`;
       const sub =
-        stage.access === "free"
-          ? "免费开放"
-          : open
-            ? "已解锁"
-            : "需要激活码";
+        stage.access === "free" ? "免费开放" : open ? "已解锁" : "需要激活码";
 
       if (stage.stageId === "world.letters" && open) {
         return `
@@ -93,16 +101,27 @@ function renderMap() {
 }
 
 function renderLetters() {
-  const letters = (lettersMeta?.letters || "abcdefghijklmnopqrstuvwxyz").split("");
-  const chips = letters
-    .map((ch) => {
-      const id = `letters-${ch}`;
-      const p = getLevelProgress(id);
+  const groups = letterGroups();
+  const sections = groups
+    .map((g) => {
+      const chips = String(g.letters || "")
+        .split("")
+        .map((ch) => {
+          const id = `letters-${ch}`;
+          const p = getLevelProgress(id);
+          return `
+            <button type="button" class="letter-chip ${p.cleared ? "is-cleared" : ""}" data-letter="${ch}">
+              ${ch}
+              ${p.cleared ? `<span class="star">★</span>` : ""}
+            </button>
+          `;
+        })
+        .join("");
       return `
-        <button type="button" class="letter-chip ${p.cleared ? "is-cleared" : ""}" data-letter="${ch}">
-          ${ch}
-          ${p.cleared ? `<span class="star">★</span>` : ""}
-        </button>
+        <section class="letter-section">
+          <h2 class="section-title">${g.title}</h2>
+          <div class="letter-grid">${chips}</div>
+        </section>
       `;
     })
     .join("");
@@ -110,22 +129,23 @@ function renderLetters() {
   app.innerHTML = shell(
     `
     <h1 class="hero-title">英文字母世界</h1>
-    <p class="hero-sub">拖进木墙缺口就算过关</p>
-    <div class="letter-grid">${chips}</div>
+    <p class="hero-sub">小写、大写共 52 关，拖进木墙缺口过关</p>
+    ${sections}
   `,
     { showBack: true, backHash: "#/" }
   );
 
   app.querySelectorAll("[data-letter]").forEach((el) => {
     el.addEventListener("click", () => {
-      location.hash = `#/play/letters/${el.getAttribute("data-letter")}`;
+      const ch = el.getAttribute("data-letter");
+      location.hash = `#/play/letters/${encodeURIComponent(ch)}`;
     });
   });
 }
 
-function renderPlay(letter) {
-  const ch = String(letter || "a").toLowerCase();
-  if (!/^[a-z]$/.test(ch)) {
+function renderPlay(letterRaw) {
+  const ch = decodeURIComponent(String(letterRaw || "a"));
+  if (!/^[a-zA-Z]$/.test(ch)) {
     location.hash = "#/letters";
     return;
   }
@@ -166,18 +186,12 @@ function unlockedNames(e) {
 
 function renderSettings() {
   const e = getEntitlements();
-  const vol = getVolume();
+  const activated = isActivated();
+  const levelCount = Object.keys(getProgress().levels || {}).length;
 
   app.innerHTML = shell(
     `
     <h1 class="hero-title">设置</h1>
-    <div class="settings-card">
-      <h2>声音</h2>
-      <div class="settings-row">
-        <span>音量</span>
-        <input id="vol" type="range" min="0" max="1" step="0.05" value="${vol}" />
-      </div>
-    </div>
 
     <div class="settings-card">
       <h2>激活码</h2>
@@ -187,20 +201,19 @@ function renderSettings() {
         <button type="button" class="btn btn-primary" id="redeem-btn">开通</button>
       </div>
       <p id="redeem-msg" class="muted" style="margin-top:10px">
-        ${
-          isActivated()
-            ? `已开通：${unlockedNames(e)}`
-            : "还没有开通付费世界"
-        }
+        ${activated ? `已开通：${unlockedNames(e)}` : "还没有开通付费世界"}
       </p>
+    </div>
+
+    <div class="settings-card">
+      <h2>学习进度</h2>
+      <p class="muted">已记录 ${levelCount} 个关卡记录</p>
+      <button type="button" class="btn btn-ghost" id="clear-progress">清除进度</button>
+      <p id="clear-msg" class="muted" style="margin-top:10px"></p>
     </div>
   `,
     { showBack: true, backHash: "#/" }
   );
-
-  app.querySelector("#vol").addEventListener("input", (ev) => {
-    setVolume(ev.target.value);
-  });
 
   app.querySelector("#redeem-btn").addEventListener("click", async () => {
     unlockAudio();
@@ -222,6 +235,31 @@ function renderSettings() {
       msg.textContent = `开通成功：${unlockedNames(result.entitlements)}`;
     }
   });
+
+  app.querySelector("#clear-progress").addEventListener("click", async () => {
+    const ok = window.confirm(
+      activated
+        ? "确定清除学习进度吗？本机和云端进度都会清除。"
+        : "确定清除本机学习进度吗？"
+    );
+    if (!ok) return;
+    const msg = app.querySelector("#clear-msg");
+    msg.textContent = "正在清除…";
+    const result = await clearAllProgress({
+      activated,
+      codeHash: e?.codeHash,
+    });
+    if (activated && isSyncEnabled() && !result.remoteCleared) {
+      msg.textContent = "本机进度已清除。云端未能清除，请稍后重试或检查网络。";
+      msg.className = "status-bad";
+    } else if (activated && !isSyncEnabled()) {
+      msg.textContent = "本机进度已清除。";
+      msg.className = "status-ok";
+    } else {
+      msg.textContent = "进度已清除。";
+      msg.className = "status-ok";
+    }
+  });
 }
 
 function render() {
@@ -235,7 +273,6 @@ function render() {
 }
 
 async function boot() {
-  getVolume();
   try {
     config = await loadJsonFrom("config.json");
     resolveDataBase(config);

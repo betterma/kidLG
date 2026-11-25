@@ -1,5 +1,5 @@
-import { getDeviceId, loadJson, saveJson } from "./storage.js";
-import { queueSyncIfActivated } from "./sync.js";
+import { getDeviceId, loadJson, saveJson, removeKey } from "./storage.js";
+import { queueSyncIfActivated, clearRemoteProgress } from "./sync.js";
 
 const KEY = "progress";
 
@@ -70,4 +70,23 @@ export function mergeProgress(localSnap, remoteSnap) {
   const tb = Date.parse(remoteSnap.updatedAt || 0) || 0;
   out.updatedAt = new Date(Math.max(ta, tb) || Date.now()).toISOString();
   return out;
+}
+
+/**
+ * 未激活：只清本地。
+ * 已激活：清本地，并尽量清云端（有同步中转时）。
+ */
+export async function clearAllProgress({ activated, codeHash } = {}) {
+  removeKey(KEY);
+  let remoteCleared = false;
+  let remoteAttempted = false;
+  if (activated) {
+    remoteAttempted = true;
+    try {
+      remoteCleared = await clearRemoteProgress(codeHash);
+    } catch {
+      remoteCleared = false;
+    }
+  }
+  return { remoteAttempted, remoteCleared };
 }

@@ -11,6 +11,7 @@ on:
       - "css/**"
       - "js/**"
       - "assets/**"
+      - "admin/**"
       - "config.json"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -46,7 +47,7 @@ jobs:
         run: |
           mkdir -p _site
           # data/ 作为 raw 失败时的回退副本一并打包
-          cp -r index.html config.json css js assets data _site/
+          cp -r index.html config.json css js assets data admin _site/
           if [ -d docs ]; then cp -r docs _site/; fi
           if [ -f README.md ]; then cp README.md _site/; fi
 

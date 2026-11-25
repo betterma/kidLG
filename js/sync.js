@@ -7,12 +7,16 @@ export function setSyncConfig(syncConfig) {
   configRef = syncConfig || { enabled: false, endpoint: "" };
 }
 
+export function isSyncEnabled() {
+  return !!(configRef.enabled && configRef.endpoint);
+}
+
 /**
  * 激活后静默同步进度。无 endpoint 时仅为预留（不报错）。
  */
 export function queueSyncIfActivated(snapshot) {
   if (!isActivated()) return;
-  if (!configRef.enabled || !configRef.endpoint) return;
+  if (!isSyncEnabled()) return;
 
   clearTimeout(timer);
   timer = setTimeout(() => {
@@ -37,7 +41,7 @@ async function pushProgress(snapshot) {
 }
 
 export async function pullProgress() {
-  if (!configRef.enabled || !configRef.endpoint) return null;
+  if (!isSyncEnabled()) return null;
   const e = getEntitlements();
   if (!e?.codeHash) return null;
   const res = await fetch(
@@ -45,4 +49,32 @@ export async function pullProgress() {
   );
   if (!res.ok) return null;
   return res.json();
+}
+
+/** 清除云端进度；无中转时返回 false（表示未真正清云） */
+export async function clearRemoteProgress(codeHash) {
+  if (!isSyncEnabled()) return false;
+  const hash = codeHash || getEntitlements()?.codeHash;
+  if (!hash) return false;
+
+  const base = configRef.endpoint.replace(/\/$/, "");
+  const empty = {
+    codeHash: hash,
+    deviceId: "",
+    updatedAt: new Date().toISOString(),
+    levels: {},
+  };
+
+  let res = await fetch(`${base}/progress/${encodeURIComponent(hash)}`, {
+    method: "DELETE",
+  }).catch(() => null);
+
+  if (!res || !res.ok) {
+    res = await fetch(`${base}/progress`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(empty),
+    });
+  }
+  return !!(res && res.ok);
 }

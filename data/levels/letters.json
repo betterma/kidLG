@@ -3,5 +3,16 @@
   "stageId": "world.letters",
   "template": "fit-in",
   "theme": "wooden-wall",
-  "letters": "abcdefghijklmnopqrstuvwxyz"
+  "groups": [
+    {
+      "id": "lower",
+      "title": "小写字母",
+      "letters": "abcdefghijklmnopqrstuvwxyz"
+    },
+    {
+      "id": "upper",
+      "title": "大写字母",
+      "letters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    }
+  ]
 }
