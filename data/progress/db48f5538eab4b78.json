@@ -1,0 +1,27 @@
+{
+  "codeHash": "db48f5538eab4b78",
+  "deviceId": "5c522534-4b0f-4f2a-994e-5677010864fc",
+  "updatedAt": "2026-11-25T11:47:36.589Z",
+  "levels": {
+    "letters-a": {
+      "stars": 1,
+      "cleared": true,
+      "attempts": 2
+    },
+    "letters-b": {
+      "stars": 1,
+      "cleared": true,
+      "attempts": 2
+    },
+    "letters-c": {
+      "stars": 1,
+      "cleared": true,
+      "attempts": 2
+    },
+    "letters-z": {
+      "stars": 1,
+      "cleared": true,
+      "attempts": 2
+    }
+  }
+}
