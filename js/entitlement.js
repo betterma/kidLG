@@ -1,6 +1,7 @@
-import { getDeviceId, loadJson, saveJson, removeKey } from "./storage.js";
+import { getDeviceId, loadJson, saveJson } from "./storage.js";
 
 const KEY = "entitlements";
+const CONSUMED_KEY = "consumedCodes";
 
 export function getEntitlements() {
   return loadJson(KEY, null);
@@ -8,11 +9,21 @@ export function getEntitlements() {
 
 export function isActivated() {
   const e = getEntitlements();
-  return !!(e && e.status === "active");
+  return !!(e && e.status === "active" && !isExpired(e.expireAt));
 }
 
-export function clearEntitlements() {
-  removeKey(KEY);
+function getConsumedCodes() {
+  const list = loadJson(CONSUMED_KEY, []);
+  return Array.isArray(list) ? list.map((c) => String(c).toUpperCase()) : [];
+}
+
+function markConsumed(code) {
+  const normalized = String(code).trim().toUpperCase();
+  const list = getConsumedCodes();
+  if (!list.includes(normalized)) {
+    list.push(normalized);
+    saveJson(CONSUMED_KEY, list);
+  }
 }
 
 function computeExpireAt(validity, fromDate = new Date()) {
@@ -43,13 +54,23 @@ export async function hashCode(code) {
   return h.toString(16).padStart(8, "0");
 }
 
+/**
+ * 激活码一次性：兑换成功后记入本机已用列表，同一浏览器不可再兑。
+ * 跨设备全局作废需后端；静态站阶段以本机作废为准。
+ */
 export async function redeemCode(rawCode, codesList) {
   const code = String(rawCode || "").trim().toUpperCase();
   if (!code) return { ok: false, message: "请输入激活码" };
 
+  if (getConsumedCodes().includes(code)) {
+    return { ok: false, message: "激活码已使用" };
+  }
+
   const found = (codesList || []).find((c) => String(c.code).toUpperCase() === code);
   if (!found) return { ok: false, message: "激活码无效" };
-  if (found.status === "revoked") return { ok: false, message: "激活码已作废" };
+  if (found.status === "revoked" || found.status === "used") {
+    return { ok: false, message: "激活码已作废" };
+  }
 
   const now = new Date();
   let expireAt = found.expireAt;
@@ -58,20 +79,25 @@ export async function redeemCode(rawCode, codesList) {
     return { ok: false, message: "激活码已过期" };
   }
 
+  const existing = getEntitlements();
+  const mergedStages = new Set([...(existing?.stages || []), ...(found.stages || [])]);
+
   const entitlements = {
     code: found.code,
-    stages: [...(found.stages || [])],
+    stages: [...mergedStages],
     expireAt,
     deviceId: getDeviceId(),
     status: "active",
     codeHash: await hashCode(found.code),
   };
+
+  markConsumed(found.code);
   saveJson(KEY, entitlements);
-  return { ok: true, entitlements, message: "激活成功" };
+  return { ok: true, entitlements, message: "开通成功" };
 }
 
-export function canAccessStage(stage, edition) {
-  if (edition === "owner") return true;
+/** 仅按免费世界 / 已开通世界门禁，无全开模式 */
+export function canAccessStage(stage) {
   if (!stage) return false;
   if (stage.access === "free") return true;
   const e = getEntitlements();

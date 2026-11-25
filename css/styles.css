@@ -45,11 +45,20 @@ body {
     linear-gradient(165deg, #c9a67a 0%, #a67c52 45%, #8a6340 100%);
   background-attachment: fixed;
   overflow-x: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 body {
   min-height: 100dvh;
   min-height: 100svh;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 body.is-dragging-piece {
@@ -449,11 +458,43 @@ button {
   text-shadow: 0 2px 0 rgba(40, 20, 10, 0.35);
 }
 
+.play-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: min(100%, var(--stage-max));
+  padding: 0 4px;
+}
+
 .play-hint {
   text-align: center;
   font-size: 1.05rem;
   color: rgba(42, 26, 16, 0.85);
   min-height: 1.4em;
+  margin: 0;
+  flex: 1;
+}
+
+.btn-speaker {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-size: 1.45rem;
+  line-height: 1;
+  background: linear-gradient(180deg, #fff6e8, #e8c9a0);
+  color: var(--wood-deep);
+  box-shadow: 0 4px 0 rgba(92, 58, 33, 0.25);
+  border: 2px solid rgba(92, 58, 33, 0.2);
+}
+
+.btn-speaker:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(92, 58, 33, 0.25);
 }
 
 .success-overlay {

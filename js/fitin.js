@@ -1,16 +1,23 @@
-import { playGlyph, playGlyphRepeat, playPop, unlockAudio } from "./audio.js";
+import { playGlyph, playPop, unlockAudio } from "./audio.js";
 import { recordAttempt, recordClear } from "./progress.js";
 
-export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRepeat = 3, audioOpts }) {
+function rand(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+export function mountFitIn(root, { glyph, levelId, snapDistance = 56, audioOpts }) {
   const letter = String(glyph).toLowerCase();
   root.innerHTML = `
     <div class="play-wrap">
-      <p class="play-hint" data-hint>点一下字母听发音，再拖进木墙上的缺口</p>
+      <div class="play-toolbar">
+        <p class="play-hint" data-hint>拖进缺口就过关啦</p>
+        <button type="button" class="btn-speaker" data-speaker aria-label="听发音">🔊</button>
+      </div>
       <div class="wood-stage" data-stage>
         <div class="slot" data-slot>
           <span class="slot-glyph">${letter}</span>
         </div>
-        <div class="piece" data-piece style="left:18%;bottom:12%;top:auto;">
+        <div class="piece" data-piece>
           <span class="piece-glyph">${letter}</span>
         </div>
         <div class="confetti-layer" data-confetti></div>
@@ -35,6 +42,7 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
   const hint = root.querySelector("[data-hint]");
   const success = root.querySelector("[data-success]");
   const confetti = root.querySelector("[data-confetti]");
+  const speaker = root.querySelector("[data-speaker]");
 
   let dragging = false;
   let pointerId = null;
@@ -42,7 +50,8 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
   let startY = 0;
   let originLeft = 0;
   let originTop = 0;
-  let home = { left: 0.18, top: 0.72 };
+  let home = { left: 0.2, top: 0.7 };
+  let slotPos = { left: 0.5, top: 0.28 };
   let cleared = false;
   let missCount = 0;
 
@@ -50,14 +59,21 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
     return stage.getBoundingClientRect();
   }
 
-  /** 吸附半径随木墙尺寸缩放，小屏更好拖进 */
   function effectiveSnap() {
     const w = stageRect().width || 320;
     const scaled = snapDistance * (w / 420);
     return Math.max(44, Math.min(96, scaled));
   }
 
+  function setSlotRatio(leftRatio, topRatio) {
+    slotPos = { left: leftRatio, top: topRatio };
+    slot.style.left = `${leftRatio * 100}%`;
+    slot.style.top = `${topRatio * 100}%`;
+    slot.style.transform = "translate(-50%, -50%)";
+  }
+
   function setPieceRatio(leftRatio, topRatio) {
+    home = { left: leftRatio, top: topRatio };
     const r = stageRect();
     const pw = piece.offsetWidth;
     const ph = piece.offsetHeight;
@@ -82,6 +98,35 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
 
   function dist(a, b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  /** 随机洞口与卡片，并保证初始不太靠近 */
+  function randomizeLayout() {
+    const st = stageRect();
+    if (st.width < 40 || st.height < 40) return;
+
+    const slotW = slot.offsetWidth / st.width;
+    const slotH = slot.offsetHeight / st.height;
+    const pieceW = piece.offsetWidth / st.width;
+    const pieceH = piece.offsetHeight / st.height;
+
+    const sLeft = rand(0.22 + slotW / 2, 0.78 - slotW / 2);
+    const sTop = rand(0.18 + slotH / 2, 0.48);
+    setSlotRatio(sLeft, sTop);
+
+    let pLeft;
+    let pTop;
+    let tries = 0;
+    do {
+      pLeft = rand(0.04, Math.max(0.05, 1 - pieceW - 0.04));
+      pTop = rand(0.52, Math.max(0.53, 1 - pieceH - 0.04));
+      tries += 1;
+    } while (
+      tries < 24 &&
+      Math.hypot(pLeft + pieceW / 2 - sLeft, pTop + pieceH / 2 - sTop) < 0.38
+    );
+
+    setPieceRatio(pLeft, pTop);
   }
 
   function dockToSlot() {
@@ -111,7 +156,7 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
     }
   }
 
-  async function onSuccess() {
+  function onSuccess() {
     if (cleared) return;
     cleared = true;
     recordClear(levelId, 1);
@@ -120,7 +165,6 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
     hint.textContent = "拼好啦！";
     spawnConfetti();
     success.classList.add("is-on");
-    await playGlyphRepeat(letter, successRepeat, audioOpts);
   }
 
   function onPointerDown(e) {
@@ -179,7 +223,7 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
     missCount += 1;
     setPieceRatio(home.left, home.top);
     slot.classList.remove("is-hot");
-    hint.textContent = missCount >= 2 ? "把字母拖到上面凹进去的地方～" : "再靠近一点缺口再松手";
+    hint.textContent = missCount >= 2 ? "拖到缺口里松手～" : "再靠近一点再松手";
   }
 
   function onResize() {
@@ -187,8 +231,16 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
       dockToSlot();
       return;
     }
-    if (!dragging) setPieceRatio(home.left, home.top);
+    if (!dragging) {
+      setSlotRatio(slotPos.left, slotPos.top);
+      setPieceRatio(home.left, home.top);
+    }
   }
+
+  speaker.addEventListener("click", () => {
+    unlockAudio();
+    playGlyph(letter, audioOpts);
+  });
 
   piece.addEventListener("pointerdown", onPointerDown);
   piece.addEventListener("pointermove", onPointerMove);
@@ -218,5 +270,7 @@ export function mountFitIn(root, { glyph, levelId, snapDistance = 56, successRep
     document.body.classList.remove("is-dragging-piece");
   }
 
-  requestAnimationFrame(() => setPieceRatio(home.left, home.top));
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => randomizeLayout());
+  });
 }

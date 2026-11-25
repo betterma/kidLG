@@ -1,7 +1,6 @@
 {
-  "edition": "owner",
   "appName": "KidLG",
-  "maxDevicesPerCode": 3,
+  "maxDevicesPerCode": 1,
   "data": {
     "source": "auto",
     "remoteBase": "https://raw.githubusercontent.com/betterma/kidLG/main/"
@@ -12,8 +11,7 @@
   },
   "audio": {
     "preferFiles": true,
-    "speechFallback": true,
-    "successRepeat": 3
+    "speechFallback": true
   },
   "fitIn": {
     "snapDistance": 56

@@ -1,5 +1,5 @@
 import { getVolume, setVolume, unlockAudio } from "./audio.js";
-import { canAccessStage, getEntitlements, redeemCode, clearEntitlements, isActivated } from "./entitlement.js";
+import { canAccessStage, getEntitlements, redeemCode, isActivated } from "./entitlement.js";
 import { getLevelProgress, getProgress, mergeProgress, saveProgress } from "./progress.js";
 import { setSyncConfig, pullProgress } from "./sync.js";
 import { mountFitIn } from "./fitin.js";
@@ -10,17 +10,12 @@ let config = null;
 let stages = [];
 let codes = [];
 let lettersMeta = null;
-let dataSourceLabel = "";
-
-function edition() {
-  return config?.edition || "owner";
-}
 
 function parseRoute() {
   const raw = (location.hash || "#/").replace(/^#/, "") || "/";
-  const [pathPart, query = ""] = raw.split("?");
+  const [pathPart] = raw.split("?");
   const parts = pathPart.split("/").filter(Boolean);
-  return { parts, query };
+  return { parts };
 }
 
 function shell(content, { showBack = false, backHash = "#/" } = {}) {
@@ -41,10 +36,10 @@ function renderMap() {
     .filter((s) => s.listed)
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((stage) => {
-      const open = canAccessStage(stage, edition());
+      const open = canAccessStage(stage);
       const price =
         stage.access === "free"
-          ? "免费体验"
+          ? "免费"
           : stage.priceYuan != null
             ? `¥${stage.priceYuan}`
             : "即将开放";
@@ -53,12 +48,10 @@ function renderMap() {
         : `<span class="badge badge-lock">🔒 ${price}</span>`;
       const sub =
         stage.access === "free"
-          ? "整座世界免费开放"
+          ? "免费开放"
           : open
             ? "已解锁"
-            : edition() === "owner"
-              ? "Owner 可进"
-              : "输入激活码后可玩";
+            : "需要激活码";
 
       if (stage.stageId === "world.letters" && open) {
         return `
@@ -82,7 +75,7 @@ function renderMap() {
 
   app.innerHTML = shell(`
     <h1 class="hero-title">一起拼字母、认汉字</h1>
-    <p class="hero-sub">点进世界开始玩。当前模式：<strong>${edition()}</strong>${isActivated() ? " · 已激活" : ""}</p>
+    <p class="hero-sub">点进世界开始玩吧</p>
     <div class="world-path">${nodes}</div>
   `);
 
@@ -117,7 +110,7 @@ function renderLetters() {
   app.innerHTML = shell(
     `
     <h1 class="hero-title">英文字母世界</h1>
-    <p class="hero-sub">木墙缺口 · 拖进去就算过关</p>
+    <p class="hero-sub">拖进木墙缺口就算过关</p>
     <div class="letter-grid">${chips}</div>
   `,
     { showBack: true, backHash: "#/" }
@@ -137,7 +130,7 @@ function renderPlay(letter) {
     return;
   }
   const stage = stages.find((s) => s.stageId === "world.letters");
-  if (!canAccessStage(stage, edition())) {
+  if (!canAccessStage(stage)) {
     location.hash = "#/settings";
     return;
   }
@@ -146,7 +139,7 @@ function renderPlay(letter) {
     `
     <div class="play-header">
       <h1 class="hero-title">字母 ${ch}</h1>
-      <p class="hero-sub">木墙上的缺口在等你</p>
+      <p class="hero-sub">把字母放进缺口</p>
     </div>
     <div id="fitin-root" class="fitin-host"></div>
   `,
@@ -158,7 +151,6 @@ function renderPlay(letter) {
     glyph: ch,
     levelId: `letters-${ch}`,
     snapDistance: config?.fitIn?.snapDistance ?? 56,
-    successRepeat: config?.audio?.successRepeat ?? 3,
     audioOpts: {
       preferFiles: config?.audio?.preferFiles !== false,
       speechFallback: config?.audio?.speechFallback !== false,
@@ -166,10 +158,15 @@ function renderPlay(letter) {
   });
 }
 
+function unlockedNames(e) {
+  if (!e?.stages?.length) return "";
+  const map = Object.fromEntries(stages.map((s) => [s.stageId, s.name]));
+  return e.stages.map((id) => map[id] || id).join("、");
+}
+
 function renderSettings() {
   const e = getEntitlements();
   const vol = getVolume();
-  const syncOn = !!(config?.sync?.enabled && config?.sync?.endpoint);
 
   app.innerHTML = shell(
     `
@@ -180,39 +177,22 @@ function renderSettings() {
         <span>音量</span>
         <input id="vol" type="range" min="0" max="1" step="0.05" value="${vol}" />
       </div>
-      <p class="muted">首次点击字母时会开启发音（也可使用系统朗读）。</p>
     </div>
 
     <div class="settings-card">
-      <h2>发行模式</h2>
-      <p>当前：<strong>${edition()}</strong>（改 <code>config.json</code> 的 <code>edition</code>）</p>
-      <p class="muted">owner = 全开；retail = 按 stages 与激活码门禁。</p>
-    </div>
-
-    <div class="settings-card" ${edition() === "owner" ? 'style="opacity:.85"' : ""}>
       <h2>激活码</h2>
-      <p class="muted">演示码：DEMO-PINYIN-0001 或 DEMO-ALL-0001</p>
-      <input id="code-input" type="text" placeholder="输入激活码" value="" autocomplete="off" />
+      <p class="muted">开通更多学习世界。每个激活码只能使用一次。</p>
+      <input id="code-input" type="text" placeholder="请输入激活码" value="" autocomplete="off" />
       <div class="settings-row" style="margin-top:12px">
-        <button type="button" class="btn btn-primary" id="redeem-btn">兑换</button>
-        <button type="button" class="btn btn-ghost" id="clear-ent">清除本机激活</button>
+        <button type="button" class="btn btn-primary" id="redeem-btn">开通</button>
       </div>
       <p id="redeem-msg" class="muted" style="margin-top:10px">
         ${
-          e
-            ? `已激活：${e.code} · 世界 ${e.stages.join(", ")}`
-            : "未激活：进度仅保存在本机浏览器"
+          isActivated()
+            ? `已开通：${unlockedNames(e)}`
+            : "还没有开通付费世界"
         }
       </p>
-      <p class="muted">激活后进度仍写本机；若配置了同步中转，会静默备份到 GitHub。</p>
-      <p class="muted">同步中转：${syncOn ? "已配置" : "未启用（预留接口）"}</p>
-      <p class="muted">内容 JSON 来源：${dataSourceLabel || "—"}（改 data/*.json 推 main 即可，不必等 Pages）</p>
-    </div>
-
-    <div class="settings-card">
-      <h2>本机进度</h2>
-      <p class="muted">已记录关卡数：${Object.keys(getProgress().levels || {}).length}</p>
-      <button type="button" class="btn btn-ghost" id="reset-progress">清除本机进度</button>
     </div>
   `,
     { showBack: true, backHash: "#/" }
@@ -239,17 +219,8 @@ function renderSettings() {
       const snap = getProgress();
       snap.codeHash = result.entitlements.codeHash;
       saveProgress(snap);
+      msg.textContent = `开通成功：${unlockedNames(result.entitlements)}`;
     }
-  });
-
-  app.querySelector("#clear-ent").addEventListener("click", () => {
-    clearEntitlements();
-    location.reload();
-  });
-
-  app.querySelector("#reset-progress").addEventListener("click", () => {
-    localStorage.removeItem("kidlg:progress");
-    location.reload();
   });
 }
 
@@ -267,15 +238,15 @@ async function boot() {
   getVolume();
   try {
     config = await loadJsonFrom("config.json");
-    const resolved = resolveDataBase(config);
-    dataSourceLabel = resolved.remote ? `远程 ${resolved.base}` : "本地 ./";
+    resolveDataBase(config);
     [stages, codes, lettersMeta] = await Promise.all([
       loadDataJson(config, "data/stages.json"),
       loadDataJson(config, "data/codes.json"),
       loadDataJson(config, "data/levels/letters.json"),
     ]);
   } catch (err) {
-    app.innerHTML = `<main class="screen"><h1>加载失败</h1><p>${err.message}</p><p class="muted">若用本地文件打开，请改用本地静态服务器或 GitHub Pages。</p></main>`;
+    app.innerHTML = `<main class="screen"><h1>加载失败</h1><p>请检查网络后重试</p></main>`;
+    console.error(err);
     return;
   }
   setSyncConfig(config.sync || {});

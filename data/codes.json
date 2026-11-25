@@ -8,7 +8,7 @@
     "expireAt": null,
     "deviceIds": [],
     "createdAt": "2026-11-25T00:00:00.000Z",
-    "note": "演示码：开通拼音世界"
+    "note": "演示码：开通拼音世界（一次性）"
   },
   {
     "code": "DEMO-ALL-0001",
@@ -19,6 +19,6 @@
     "expireAt": null,
     "deviceIds": [],
     "createdAt": "2026-11-25T00:00:00.000Z",
-    "note": "演示码：开通全部收费世界"
+    "note": "演示码：开通全部收费世界（一次性）"
   }
 ]

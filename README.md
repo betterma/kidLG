@@ -47,8 +47,8 @@ python -m http.server 5173
 | `data/codes.json` | 演示激活码 |
 | `data/levels/letters.json` | 字母关卡组 |
 
-- **Owner**：全世界大开（默认）  
-- **Retail**：按 `stages.json` + 激活码门禁  
+- 免费世界可直接玩；付费世界需激活码  
+- 激活码**一次性**（本机兑换后作废）  
 - 演示码：`DEMO-PINYIN-0001`、`DEMO-ALL-0001`
 
 ## 进度
