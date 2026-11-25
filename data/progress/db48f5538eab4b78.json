@@ -1,7 +1,7 @@
 {
   "codeHash": "db48f5538eab4b78",
   "deviceId": "5c522534-4b0f-4f2a-994e-5677010864fc",
-  "updatedAt": "2026-11-25T12:58:31.267Z",
+  "updatedAt": "2026-11-25T12:58:36.358Z",
   "levels": {
     "pinyin-a": {
       "stars": 1,
@@ -16,7 +16,7 @@
     "pinyin-ba": {
       "stars": 1,
       "cleared": true,
-      "attempts": 1
+      "attempts": 2
     }
   }
 }
